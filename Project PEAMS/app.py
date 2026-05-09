@@ -5,7 +5,7 @@ app = Flask(__name__)
 
 
 # =========================
-# EVENTS CRUD
+# VIEW EVENTS
 # =========================
 @app.route('/events')
 def events():
@@ -27,6 +27,9 @@ def events():
     )
 
 
+# =========================
+# ADD EVENT
+# =========================
 @app.route('/add_event', methods=['GET', 'POST'])
 def add_event():
 
@@ -71,6 +74,9 @@ def add_event():
     return render_template('add_event.html')
 
 
+# =========================
+# EDIT EVENT
+# =========================
 @app.route('/edit_event/<int:id>', methods=['GET', 'POST'])
 def edit_event(id):
 
@@ -126,6 +132,9 @@ def edit_event(id):
     )
 
 
+# =========================
+# DELETE EVENT
+# =========================
 @app.route('/delete_event/<int:id>')
 def delete_event(id):
 
@@ -143,133 +152,268 @@ def delete_event(id):
 
     return redirect('/events')
 
-# =====================================================
-#  ATTENDEES CRUD
-# =====================================================
+# ==============================================================
 
+# =========================
+# VIEW ATTENDEES
+# =========================
 @app.route('/attendees')
 def attendees():
+
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM attendees")
-    data = cursor.fetchall()
-    conn.close()
-    return render_template('attendees.html', attendees=data)
 
+    query = "SELECT * FROM attendees"
+    cursor.execute(query)
 
-@app.route('/add_attendee', methods=['POST'])
-def add_attendee():
-    name = request.form['name']
-    email = request.form['email']
+    attendees_list = cursor.fetchall()
 
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO attendees (name, email) VALUES (%s, %s)", (name, email))
-    conn.commit()
+    cursor.close()
     conn.close()
 
-    return redirect('/attendees')
-
-
-@app.route('/update_attendee/<int:id>', methods=['POST'])
-def update_attendee(id):
-    name = request.form['name']
-    email = request.form['email']
-
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "UPDATE attendees SET name=%s, email=%s WHERE id=%s",
-        (name, email, id)
+    return render_template(
+        'attendees.html',
+        attendees=attendees_list
     )
-    conn.commit()
+
+
+# =========================
+# ADD ATTENDEE
+# =========================
+@app.route('/add_attendee', methods=['GET', 'POST'])
+def add_attendee():
+
+    if request.method == 'POST':
+
+        fullname = request.form['fullname']
+        email = request.form['email']
+        contact_no = request.form['contact_no']
+        address = request.form['address']
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        query = """
+        INSERT INTO attendees (
+            fullname,
+            email,
+            contact_no,
+            address
+        )
+        VALUES (%s, %s, %s, %s)
+        """
+
+        values = (
+            fullname,
+            email,
+            contact_no,
+            address
+        )
+
+        cursor.execute(query, values)
+
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        return redirect('/attendees')
+
+    return render_template('add_attendee.html')
+
+
+# =========================
+# EDIT ATTENDEE
+# =========================
+@app.route('/edit_attendee/<int:id>', methods=['GET', 'POST'])
+def edit_attendee(id):
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    if request.method == 'POST':
+
+        fullname = request.form['fullname']
+        email = request.form['email']
+        contact_no = request.form['contact_no']
+        address = request.form['address']
+
+        query = """
+        UPDATE attendees
+        SET
+            fullname=%s,
+            email=%s,
+            contact_no=%s,
+            address=%s
+        WHERE attendee_id=%s
+        """
+
+        values = (
+            fullname,
+            email,
+            contact_no,
+            address,
+            id
+        )
+
+        cursor.execute(query, values)
+
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        return redirect('/attendees')
+
+    query = "SELECT * FROM attendees WHERE attendee_id = %s"
+
+    cursor.execute(query, (id,))
+
+    attendee = cursor.fetchone()
+
+    cursor.close()
     conn.close()
 
-    return redirect('/attendees')
+    return render_template(
+        'edit_attendee.html',
+        attendee=attendee
+    )
 
 
+# =========================
+# DELETE ATTENDEE
+# =========================
 @app.route('/delete_attendee/<int:id>')
 def delete_attendee(id):
+
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM attendees WHERE id=%s", (id,))
+
+    query = "DELETE FROM attendees WHERE attendee_id = %s"
+
+    cursor.execute(query, (id,))
+
     conn.commit()
+
+    cursor.close()
     conn.close()
 
     return redirect('/attendees')
 
+# =================================================================
 
-# =====================================================
-# REGISTRATION CRUD
-# =====================================================
-
+# =========================
+# VIEW REGISTRATIONS
+# =========================
 @app.route('/registrations')
 def registrations():
+
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
-    cursor.execute("""
-        SELECT r.id, a.name AS attendee_name, r.event_name, r.status
-        FROM registrations r
-        JOIN attendees a ON r.attendee_id = a.id
-    """)
+    query = """
+    SELECT
+        registrations.registration_id,
+        attendees.fullname,
+        events.event_name,
+        registrations.attendance_status,
+        registrations.registration_date
+    FROM registrations
+    JOIN attendees
+        ON registrations.attendee_id = attendees.attendee_id
+    JOIN events
+        ON registrations.event_id = events.event_id
+    """
 
-    data = cursor.fetchall()
+    cursor.execute(query)
+
+    registrations_list = cursor.fetchall()
+
+    cursor.close()
     conn.close()
-    return render_template('registrations.html', registrations=data)
+
+    return render_template(
+        'registrations.html',
+        registrations=registrations_list
+    )
 
 
-@app.route('/add_registration', methods=['POST'])
+# =========================
+# ADD REGISTRATION
+# =========================
+@app.route('/add_registration', methods=['GET', 'POST'])
 def add_registration():
-    attendee_id = request.form['attendee_id']
-    event_name = request.form['event_name']
-    status = request.form['status']
 
     conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO registrations (attendee_id, event_name, status)
-        VALUES (%s, %s, %s)
-    """, (attendee_id, event_name, status))
-    conn.commit()
+    cursor = conn.cursor(dictionary=True)
+
+    if request.method == 'POST':
+
+        attendee_id = request.form['attendee_id']
+        event_id = request.form['event_id']
+        attendance_status = request.form['attendance_status']
+
+        query = """
+        INSERT INTO registrations (
+            attendee_id,
+            event_id,
+            attendance_status,
+            registration_date
+        )
+        VALUES (%s, %s, %s, NOW())
+        """
+
+        values = (
+            attendee_id,
+            event_id,
+            attendance_status
+        )
+
+        cursor.execute(query, values)
+
+        conn.commit()
+
+        return redirect('/registrations')
+
+    cursor.execute("SELECT * FROM attendees")
+    attendees = cursor.fetchall()
+
+    cursor.execute("SELECT * FROM events")
+    events = cursor.fetchall()
+
+    cursor.close()
     conn.close()
 
-    return redirect('/registrations')
+    return render_template(
+        'add_registration.html',
+        attendees=attendees,
+        events=events
+    )
 
 
-@app.route('/update_registration/<int:id>', methods=['POST'])
-def update_registration(id):
-    event_name = request.form['event_name']
-    status = request.form['status']
-
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        UPDATE registrations
-        SET event_name=%s, status=%s
-        WHERE id=%s
-    """, (event_name, status, id))
-
-    conn.commit()
-    conn.close()
-
-    return redirect('/registrations')
-
-
+# =========================
+# DELETE REGISTRATION
+# =========================
 @app.route('/delete_registration/<int:id>')
 def delete_registration(id):
+
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM registrations WHERE id=%s", (id,))
+
+    query = "DELETE FROM registrations WHERE registration_id = %s"
+
+    cursor.execute(query, (id,))
+
     conn.commit()
+
+    cursor.close()
     conn.close()
 
     return redirect('/registrations')
 
 
-# =====================================================
+# =========================
 # RUN APP
-# =====================================================
-
+# =========================
 if __name__ == '__main__':
     app.run(debug=True)
