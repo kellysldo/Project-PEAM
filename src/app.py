@@ -1,11 +1,13 @@
 from flask import Flask, render_template, request, redirect
 from database import get_connection
+import os
+print("CURRENT DIR:", os.getcwd())
 
 app = Flask(__name__)
 
 
 # =========================
-# VIEW EVENTS
+# VIEW EVENTSs
 # =========================
 @app.route('/events')
 def events():
@@ -22,7 +24,7 @@ def events():
     conn.close()
 
     return render_template(
-        'events.html',
+        'events/events.html',
         events=events_list
     )
 
@@ -71,7 +73,7 @@ def add_event():
 
         return redirect('/events')
 
-    return render_template('add_event.html')
+    return render_template('events/add_event.html')
 
 
 # =========================
@@ -127,7 +129,7 @@ def edit_event(id):
     conn.close()
 
     return render_template(
-        'edit_event.html',
+        'events/edit_event.html',
         event=event
     )
 
@@ -172,7 +174,7 @@ def attendees():
     conn.close()
 
     return render_template(
-        'attendees.html',
+        'attendees/attendees.html',
         attendees=attendees_list
     )
 
@@ -219,7 +221,7 @@ def add_attendee():
 
         return redirect('/attendees')
 
-    return render_template('add_attendee.html')
+    return render_template('attendees/add_attendee.html')
 
 
 # =========================
@@ -275,7 +277,7 @@ def edit_attendee(id):
     conn.close()
 
     return render_template(
-        'edit_attendee.html',
+        'attendees/edit_attendee.html',
         attendee=attendee
     )
 
@@ -333,7 +335,7 @@ def registrations():
     conn.close()
 
     return render_template(
-        'registrations.html',
+        'registrations/registrations.html',
         registrations=registrations_list
     )
 
@@ -385,7 +387,7 @@ def add_registration():
     conn.close()
 
     return render_template(
-        'add_registration.html',
+        'registrations/add_registration.html',
         attendees=attendees,
         events=events
     )
