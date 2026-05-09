@@ -4,3 +4,8 @@ __pycache__/
 *.pyo
 .env
 venv/
+
+cccs105/
+*.frm
+*.ibd
+*.opt
