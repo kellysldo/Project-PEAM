@@ -1,98 +1,56 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-    <title>Registrations Management</title>
-    <style>
-        body { font-family: Arial; margin: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        table, th, td { border: 1px solid #ccc; }
-        th, td { padding: 10px; text-align: center; }
+    <title>Registrations</title>
 
-        .form-box {
-            margin-bottom: 20px;
-            padding: 15px;
-            border: 1px solid #ddd;
-        }
-
-        select, button {
-            padding: 8px;
-            margin: 5px;
-        }
-    </style>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 
-<body>
+<body class="container mt-5">
 
-<h2>🎟 Event Registrations</h2>
+    <h1 class="mb-4">Registrations List</h1>
 
-<!-- CREATE REGISTRATION -->
-<div class="form-box">
-    <h3>Register Attendee to Event</h3>
+    <a href="/add_registration"
+       class="btn btn-primary mb-3">
+        Add Registration
+    </a>
 
-    <form method="POST" action="/add_registration">
+    <table class="table table-bordered table-striped">
 
-        <!-- Attendee dropdown -->
-        <select name="attendee_id" required>
-            <option value="">Select Attendee</option>
-            {% for a in attendees %}
-                <option value="{{ a.id }}">{{ a.name }}</option>
-            {% endfor %}
-        </select>
+        <tr>
+            <th>ID</th>
+            <th>Attendee</th>
+            <th>Event</th>
+            <th>Status</th>
+            <th>Registration Date</th>
+            <th>Actions</th>
+        </tr>
 
-        <!-- Event dropdown -->
-        <select name="event_id" required>
-            <option value="">Select Event</option>
-            {% for e in events %}
-                <option value="{{ e.id }}">{{ e.title }}</option>
-            {% endfor %}
-        </select>
+        {% for registration in registrations %}
 
-        <button type="submit">Register</button>
-    </form>
-</div>
+        <tr>
 
-<!-- READ REGISTRATIONS -->
-<table>
-    <tr>
-        <th>ID</th>
-        <th>Attendee</th>
-        <th>Event</th>
-        <th>Status</th>
-        <th>Actions</th>
-    </tr>
+            <td>{{ registration.registration_id }}</td>
+            <td>{{ registration.fullname }}</td>
+            <td>{{ registration.event_name }}</td>
+            <td>{{ registration.attendance_status }}</td>
+            <td>{{ registration.registration_date }}</td>
 
-    {% for r in registrations %}
-    <tr>
-        <td>{{ r.id }}</td>
-        <td>{{ r.attendee_name }}</td>
-        <td>{{ r.event_title }}</td>
-        <td>{{ r.status }}</td>
-        <td>
+            <td>
 
-            <!-- UPDATE STATUS -->
-            <form method="POST" action="/update_registration" style="display:inline;">
-                <input type="hidden" name="id" value="{{ r.id }}">
+                <a href="/delete_registration/{{ registration.registration_id }}"
+                   class="btn btn-danger btn-sm">
+                    Delete
+                </a>
 
-                <select name="status">
-                    <option value="Registered">Registered</option>
-                    <option value="Attended">Attended</option>
-                    <option value="Cancelled">Cancelled</option>
-                </select>
+            </td>
 
-                <button type="submit">Update</button>
-            </form>
+        </tr>
 
-            <!-- DELETE -->
-            <form method="POST" action="/delete_registration" style="display:inline;">
-                <input type="hidden" name="id" value="{{ r.id }}">
-                <button type="submit">Delete</button>
-            </form>
+        {% endfor %}
 
-        </td>
-    </tr>
-    {% endfor %}
-
-</table>
+    </table>
 
 </body>
 </html>
