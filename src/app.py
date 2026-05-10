@@ -1,26 +1,37 @@
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, session, url_for, flash
 from database import get_connection
 from werkzeug.security import generate_password_hash
+from flask_bcrypt import Bcrypt
 import os
 print("CURRENT DIR:", os.getcwd())
 
 app = Flask(__name__)
+bcrypt = Bcrypt(app)
+app.secret_key = "your_secret_key"
+
+# ==================================================================================================
 
 # =========================
 # VIEW USERS
 # =========================
-
-@app.route('/')
-def home():
-    return redirect('/events')
-
 @app.route('/users')
 def users():
+
+    search = request.args.get('search', '')
 
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
-    cursor.execute("SELECT * FROM users")
+    if search:
+        cursor.execute("""
+            SELECT * FROM users
+            WHERE full_name LIKE %s
+               OR email LIKE %s
+               OR role LIKE %s
+        """, (f"%{search}%", f"%{search}%", f"%{search}%"))
+    else:
+        cursor.execute("SELECT * FROM users")
+
     users = cursor.fetchall()
 
     conn.close()
@@ -116,7 +127,7 @@ def edit_user(id):
 
 
 # =========================
-# DELETE EVENTS
+# DELETE USERS
 # =========================
 @app.route('/users/delete/<int:id>')
 def delete_user(id):
@@ -142,6 +153,8 @@ def delete_user(id):
         conn.close()
 
     return redirect('/users')
+# ==================================================================================================
+
 
 # =========================
 # VIEW EVENTS
@@ -291,7 +304,7 @@ def delete_event(id):
 
     return redirect('/events')
 
-# ==============================================================
+# ==================================================================================================
 
 # =========================
 # VIEW ATTENDEES
@@ -439,7 +452,7 @@ def delete_attendee(id):
 
     return redirect('/attendees')
 
-# =================================================================
+# ==================================================================================================
 
 # =========================
 # VIEW REGISTRATIONS
@@ -549,6 +562,121 @@ def delete_registration(id):
     conn.close()
 
     return redirect('/registrations')
+# ==================================================================================================
+
+
+# =========================
+# REGISTER
+# =========================
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        full_name = request.form['full_name']
+        username = request.form['username']
+        password = request.form['password']
+
+        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO users (full_name, username, password)
+            VALUES (%s, %s, %s)
+        """, (full_name, username, hashed_password))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        flash("Registration successful!")
+        return redirect('/login')
+
+    return render_template('login/register.html')
+
+
+# =========================
+# LOGIN
+# =========================
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+
+    if request.method == 'POST':
+
+        username = request.form['username']
+        password = request.form['password']
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute(
+            "SELECT * FROM users WHERE username=%s",
+            (username,)
+        )
+
+        user = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+
+        if user and bcrypt.check_password_hash(
+            user['password'],
+            password
+        ):
+
+            session['user_id'] = user['user_id']
+            session['username'] = user['username']
+
+            flash("Login successful!")
+
+            return redirect(url_for('index'))
+
+        else:
+            flash("Invalid username or password")
+
+    return render_template('login/login.html')
+
+
+# =========================
+#  LOGOUT
+# =========================
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash("Logged out successfully")
+    return redirect('/login')
+
+
+# =========================
+# INDEX ROUTE
+# =========================
+@app.route('/')
+def index():
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT COUNT(*) FROM events")
+    total_events = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM attendees")
+    total_attendees = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM registrations")
+    total_registrations = cursor.fetchone()[0]
+
+    cursor.close()
+    conn.close()
+
+    return render_template(
+        'login/index.html',
+        total_events=total_events,
+        total_attendees=total_attendees,
+        total_registrations=total_registrations
+    )
 
 
 # =========================
