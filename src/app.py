@@ -1,13 +1,149 @@
 from flask import Flask, render_template, request, redirect
 from database import get_connection
+from werkzeug.security import generate_password_hash
+from flask import Flask, render_template, request, redirect, session, url_for, flash
+from flask_bcrypt import Bcrypt
 import os
 print("CURRENT DIR:", os.getcwd())
 
 app = Flask(__name__)
+bcrypt = Bcrypt(app)
+app.secret_key = "your_secret_key"
+
+# =========================
+# VIEW USERS
+# =========================
+@app.route('/users')
+def users():
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("SELECT * FROM users")
+    users = cursor.fetchall()
+
+    conn.close()
+
+    return render_template('users/users.html', users=users)
 
 
 # =========================
-# VIEW EVENTSs
+# ADD USERS
+# =========================
+@app.route('/users/add', methods=['GET', 'POST'])
+def add_user():
+
+    if request.method == 'POST':
+
+        full_name = request.form['full_name']
+        username = username.form['username']
+        email = request.form['email']
+        password = request.form['password']
+        hashed_password = generate_password_hash(password)
+        role = request.form['role']
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute("""
+                INSERT INTO users (full_name, email, password, role)
+                VALUES (%s, %s, %s, %s)
+            """, (full_name, email, password, role))
+
+            conn.commit()
+
+        except Exception as e:
+            conn.rollback()
+            return f"Error: {e}"
+
+        finally:
+            conn.close()
+
+        return redirect('/users')
+
+    return render_template('users/add_user.html')
+
+# =========================
+# EDIT USERS
+# =========================
+@app.route('/users/edit/<int:id>', methods=['GET', 'POST'])
+def edit_user(id):
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    if request.method == 'POST':
+
+        full_name = request.form['full_name']
+        email = request.form['email']
+        password = request.form['password']
+        hashed_password = generate_password_hash(password)
+        role = request.form['role']
+
+        try:
+            cursor.execute("""
+                UPDATE users
+                SET full_name=%s,
+                    email=%s,
+                    password=%s,
+                    role=%s
+                WHERE user_id=%s
+            """, (full_name, email, password, role, id))
+
+            conn.commit()
+
+        except Exception as e:
+            conn.rollback()
+            return f"Error: {e}"
+
+        finally:
+            conn.close()
+
+        return redirect('/users')
+
+    cursor.execute(
+        "SELECT * FROM users WHERE user_id=%s",
+        (id,)
+    )
+
+    user = cursor.fetchone()
+
+    conn.close()
+
+    return render_template('users/edit_user.html', user=user)
+
+
+# =========================
+# DELETE EVENTS
+# =========================
+@app.route('/users/delete/<int:id>')
+def delete_user(id):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+
+        cursor.execute(
+            "DELETE FROM users WHERE user_id=%s",
+            (id,)
+        )
+
+        conn.commit()
+
+    except Exception as e:
+
+        conn.rollback()
+        return f"Error: {e}"
+
+    finally:
+        conn.close()
+
+    return redirect('/users')
+
+# =========================
+# VIEW EVENTS
 # =========================
 @app.route('/events')
 def events():
@@ -412,6 +548,120 @@ def delete_registration(id):
     conn.close()
 
     return redirect('/registrations')
+
+
+# =========================
+# REGISTER
+# =========================
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        full_name = request.form['full_name']
+        username = request.form['username']
+        password = request.form['password']
+
+        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO users (full_name, username, password)
+            VALUES (%s, %s, %s)
+        """, (full_name, username, hashed_password))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        flash("Registration successful!")
+        return redirect('/login')
+
+    return render_template('login/register.html')
+
+
+# =========================
+# LOGIN
+# =========================
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+
+    if request.method == 'POST':
+
+        username = request.form['username']
+        password = request.form['password']
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute(
+            "SELECT * FROM users WHERE username=%s",
+            (username,)
+        )
+
+        user = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+
+        if user and bcrypt.check_password_hash(
+            user['password'],
+            password
+        ):
+
+            session['user_id'] = user['user_id']
+            session['username'] = user['username']
+
+            flash("Login successful!")
+
+            return redirect(url_for('index'))
+
+        else:
+            flash("Invalid username or password")
+
+    return render_template('login/login.html')
+
+
+# =========================
+#  LOGOUT
+# =========================
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash("Logged out successfully")
+    return redirect('/login')
+
+
+# =========================
+# INDEX ROUTE
+# =========================
+@app.route('/')
+def index():
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT COUNT(*) FROM events")
+    total_events = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM attendees")
+    total_attendees = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM registrations")
+    total_registrations = cursor.fetchone()[0]
+
+    cursor.close()
+    conn.close()
+
+    return render_template(
+        'login/index.html',
+        total_events=total_events,
+        total_attendees=total_attendees,
+        total_registrations=total_registrations
+    )
 
 
 # =========================
