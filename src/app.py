@@ -9,6 +9,11 @@ app = Flask(__name__)
 # =========================
 # VIEW USERS
 # =========================
+
+@app.route('/')
+def home():
+    return redirect('/events')
+
 @app.route('/users')
 def users():
 
