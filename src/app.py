@@ -1,7 +1,6 @@
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, session, url_for, flash
 from database import get_connection
 from werkzeug.security import generate_password_hash
-from flask import Flask, render_template, request, redirect, session, url_for, flash
 from flask_bcrypt import Bcrypt
 import os
 print("CURRENT DIR:", os.getcwd())
