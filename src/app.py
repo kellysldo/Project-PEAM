@@ -59,9 +59,9 @@ def add_user():
 
         try:
             cursor.execute("""
-                INSERT INTO users (full_name, email, password, role)
-                VALUES (%s, %s, %s, %s)
-            """, (full_name, email, password, role))
+                INSERT INTO users (full_name, username, email, password, role)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (full_name, username, email, password, role))
 
             conn.commit()
 
@@ -686,7 +686,7 @@ def login():
 
             flash("Login successful!")
 
-            return redirect('/index.html')
+            return redirect('/')
 
         else:
             flash("Invalid username or password")

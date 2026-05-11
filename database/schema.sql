@@ -1,5 +1,5 @@
 -- ============================================
--- Personal Events Attendance Manager System
+-- Events Attendance Management System
 -- Course: Information Management 1 - CCCS105
 -- Database: CCCS105
 -- ============================================
@@ -13,8 +13,11 @@ USE CCCS105;
 -- -----------------------------------------------
 CREATE TABLE users (
     user_id     INT AUTO_INCREMENT PRIMARY KEY,
+    full_name   VARCHAR(100),
     username    VARCHAR(50)  NOT NULL UNIQUE,
-    password    VARCHAR(255) NOT NULL
+    email       VARCHAR(100),
+    password    VARCHAR(255) NOT NULL,
+    role        ENUM('admin', 'organizer') DEFAULT 'organizer'
 );
 
 -- -----------------------------------------------
