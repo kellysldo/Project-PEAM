@@ -26,9 +26,10 @@ def users():
         cursor.execute("""
             SELECT * FROM users
             WHERE full_name LIKE %s
+               OR username LIKE %s
                OR email LIKE %s
                OR role LIKE %s
-        """, (f"%{search}%", f"%{search}%", f"%{search}%"))
+        """, (f"%{search}%", f"%{search}%", f"%{search}%", f"%{search}%"))
     else:
         cursor.execute("SELECT * FROM users")
 
