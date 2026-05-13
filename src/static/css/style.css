@@ -1,0 +1,126 @@
+/* 1. Root Variables for Consistency */
+:root {
+    --peams-purple: #B18CFE;    /* Figma Reference Purple */
+    --peams-dark: #121212;      /* Sleek Charcoal Black */
+    --peams-gray: #6B7280;      /* For labels and small text */
+}
+
+/* 2. Global Setup */
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: 'Inter', sans-serif;
+    overflow-x: hidden; /* Prevent horizontal scroll */
+}
+
+/* 3. Split Screen & Shadow Logic */
+.bg-dark-section {
+    background-color: var(--peams-dark);
+    position: relative;
+    z-index: 10;
+    /* Layered shadow that pushes over the purple side */
+    box-shadow: 20px 0px 60px rgba(0, 0, 0, 0.5);
+}
+
+.bg-purple-section {
+    background-color: var(--peams-purple);
+    min-height: 100vh;
+}
+
+/* 4. Registration Form - Underline Inputs */
+.form-underline {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #333; /* Dark subtle line */
+    color: white;
+    width: 100%;
+    padding: 10px 0;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.form-underline:focus {
+    border-bottom: 2px solid var(--peams-purple);
+}
+
+.form-underline::placeholder {
+    color: #555;
+    font-size: 0.9rem;
+}
+
+.form-label-custom {
+    color: var(--peams-gray);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 5px;
+    display: block;
+    font-weight: 600;
+}
+
+/* 5. The "Register" Pill Button */
+.btn-purple-pill {
+    background-color: var(--peams-purple);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 14px;
+    font-weight: 700;
+    font-size: 1rem;
+    transition: transform 0.2s, background-color 0.2s;
+    margin-top: 10px;
+}
+
+.btn-purple-pill:hover {
+    background-color: #9b74f0;
+    transform: translateY(-2px); /* Lift effect */
+    color: white;
+}
+
+/* 6. Right Side Typography */
+.welcome-text-container h1 {
+    font-size: 5rem;
+    font-weight: 800;
+    color: white;
+    text-shadow: 4px 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.welcome-text-container h2 {
+    font-size: 3.5rem;
+    font-weight: 300;
+    color: white;
+}
+
+/* 7. Illustration Container (Bottom Right Corner) */
+.illustration-box {
+    background: white;
+    padding: 30px;
+    /* Rounds only the top-left and bottom-left to "dock" to the right edge */
+    border-radius: 60px 0 0 60px; 
+    box-shadow: -15px 15px 40px rgba(0, 0, 0, 0.15);
+    max-width: 80%;
+    align-self: flex-end; /* Pushes to the right edge of the col-md-7 */
+}
+
+/* 8. Link Styling */
+.text-purple-link {
+    color: var(--peams-purple);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.text-purple-link:hover {
+    text-decoration: underline;
+}
+
+/* 9. Mobile Responsiveness */
+@media (max-width: 768px) {
+    .bg-dark-section {
+        box-shadow: none;
+        padding: 40px 20px !important;
+    }
+    body {
+        overflow-y: auto; /* Allow scrolling on small devices */
+    }
+}
