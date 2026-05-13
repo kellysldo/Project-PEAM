@@ -321,9 +321,6 @@ def delete_event(id):
 # ==================================================================================================
 
 # =========================
-# VIEW ATTENDEES
-# =========================
-# =========================
 # VIEW ATTENDEES + SEARCH
 # =========================
 @app.route('/attendees')
@@ -487,9 +484,6 @@ def delete_attendee(id):
 # ==================================================================================================
 
 # =========================
-# VIEW REGISTRATIONS
-# =========================
-# =========================
 # VIEW REGISTRATIONS + SEARCH
 # =========================
 @app.route('/registrations')
@@ -620,33 +614,93 @@ def delete_registration(id):
 # =========================
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+
     if request.method == 'POST':
+
         full_name = request.form['full_name']
-        email = request.form.get('email') or None
-
-        if not email:
-            flash("Email is required")
-            return redirect('/users/add')
-
+        email = request.form['email']
         username = request.form['username']
         password = request.form['password']
 
+        # USERNAME LENGTH VALIDATION
+        if len(username) > 20:
+            flash("Username must not exceed 20 characters!")
+            return redirect('/register')
+
+        # PASSWORD LENGTH VALIDATION
+        if len(password) > 20:
+            flash("Password must not exceed 16 characters!")
+            return redirect('/register')
+
+        # EMAIL VALIDATION
+        email_pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+
+        if not request.match(email_pattern, email):
+            flash("Invalid email format!")
+            return redirect('/register')
+
+        # HASH PASSWORD
         hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
 
         conn = get_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
 
-        cursor.execute("""
-            INSERT INTO users (full_name, username, password)
-            VALUES (%s, %s, %s)
-        """, (full_name, username, hashed_password))
+        try:
 
-        conn.commit()
-        cursor.close()
-        conn.close()
+            # CHECK IF USERNAME ALREADY EXISTS
+            cursor.execute(
+                "SELECT * FROM users WHERE username = %s",
+                (username,)
+            )
 
-        flash("Registration successful!")
-        return redirect('/login')
+            existing_user = cursor.fetchone()
+
+            if existing_user:
+                flash("Username already exists!")
+                return redirect('/register')
+
+            # CHECK IF EMAIL ALREADY EXISTS
+            cursor.execute(
+                "SELECT * FROM users WHERE email = %s",
+                (email,)
+            )
+
+            existing_email = cursor.fetchone()
+
+            if existing_email:
+                flash("Email already exists!")
+                return redirect('/register')
+
+            # INSERT NEW USER
+            cursor.execute("""
+                INSERT INTO users (
+                    full_name,
+                    email,
+                    username,
+                    password
+                )
+                VALUES (%s, %s, %s, %s)
+            """, (
+                full_name,
+                email,
+                username,
+                hashed_password
+            ))
+
+            conn.commit()
+
+            flash("Registration successful!")
+            return redirect('/login')
+
+        except Exception as e:
+
+            conn.rollback()
+            return f"Error: {e}"
+
+        finally:
+
+            cursor.close()
+            conn.close()
 
     return render_template('login/register.html')
 
@@ -683,7 +737,6 @@ def login():
 
             session['user_id'] = user['user_id']
             session['username'] = user['username']
-            session['role'] = user['role']
 
             flash("Login successful!")
 
