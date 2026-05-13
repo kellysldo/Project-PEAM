@@ -1,118 +1,68 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-
-    <title>Register</title>
-
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-          rel="stylesheet">
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PEAMS | Create Account</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
+<body>
 
-<body class="bg-light">
+    <div class="container-fluid p-0 vh-100 overflow-hidden">
+        <div class="row g-0 h-100">
+            
+            <div class="col-md-5 bg-dark-section d-flex align-items-center justify-content-center p-5">
+                <div class="w-100" style="max-width: 380px;">
+                    <h1 class="text-white fw-bold mb-1">Create Account</h1>
 
-    <div class="container">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="full_name" class="form-label-custom">Full Name</label>
+                            <input type="text" id="full_name" name="full_name" class="form-underline" placeholder="Enter full name" required>
+                        </div>
 
-        <div class="row justify-content-center align-items-center vh-100">
+                        <div class="mb-3">
+                            <label for="email" class="form-label-custom">Email</label>
+                            <input type="email" id="email" name="email" class="form-underline" placeholder="Enter email" required>
+                        </div>
 
-            <div class="col-md-5">
+                        <div class="mb-3">
+                            <label for="username" class="form-label-custom">Username</label>
+                            <input type="text" id="username" name="username" class="form-underline" placeholder="Enter username" required>
+                        </div>
 
-                <div class="card shadow border-0">
+                        <div class="mb-4">
+                            <label for="password" class="form-label-custom">Password</label>
+                            <input type="password" id="password" name="password" class="form-underline" placeholder="Enter password" required>
+                        </div>
 
-                    <div class="card-body p-5">
+                        <button type="submit" class="btn btn-purple-pill w-100 mb-3 shadow">Register</button>
+                    </form>
 
-                        <h2 class="text-center mb-4">
-                            Create Account
-                        </h2>
+                    <p class="text-center text-secondary small">
+                        Already have an account? <a href="/login" class="text-purple-link">Login here</a>
+                    </p>
+                </div>
+            </div>
 
-                        <form method="POST">
-
-                            <div class="mb-3">
-
-                                <label class="form-label">
-                                    Full Name
-                                </label>
-
-                                <input type="text"
-                                       name="full_name"
-                                       class="form-control"
-                                       placeholder="Enter full name"
-                                       required>
-
-                            </div>
-
-                            <div class="mb-3">
-
-                                <label class="form-label">
-                                    Email
-                                </label>
-
-                                <input type="email"
-                                       name="email"
-                                       class="form-control"
-                                       placeholder="Enter email"
-                                       required>
-
-                            </div>
-
-                            <div class="mb-3">
-
-                                <label class="form-label">
-                                    Username
-                                </label>
-
-                                <input type="text"
-                                       name="username"
-                                       class="form-control"
-                                       placeholder="Enter username"
-                                       required>
-
-                            </div>
-
-                            <div class="mb-4">
-
-                                <label class="form-label">
-                                    Password
-                                </label>
-
-                                <input type="password"
-                                       name="password"
-                                       class="form-control"
-                                       placeholder="Enter password"
-                                       required>
-
-                            </div>
-
-                            <button type="submit"
-                                    class="btn btn-dark w-100">
-
-                                Register
-
-                            </button>
-
-                        </form>
-
-                        <hr>
-
-                        <p class="text-center">
-
-                            Already have an account?
-
-                            <a href="/login">
-                                Login here
-                            </a>
-
-                        </p>
-
-                    </div>
-
+            <div class="col-md-7 bg-purple-section d-none d-md-flex flex-column justify-content-between p-5 text-white">
+                <div class="mt-5 ps-5 welcome-text-container">
+                    <h2>Welcome</h2>
+                    <h3 class="fw-light small mb-0 ms-1 opacity-75">to</h3>
+                    <h1>PEAMS</h1>
+                    <p class="lead opacity-75">Events Attendance Management System</p>
                 </div>
 
+                <div class="illustration-box shadow-lg">
+                    <img src="{{ url_for('static', filename='images/peams_illustration.png') }}" 
+                         alt="Team Illustration" 
+                         class="img-fluid">
+                </div>
             </div>
 
         </div>
-
     </div>
 
 </body>
