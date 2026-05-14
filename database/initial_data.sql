@@ -64,7 +64,8 @@ VALUES
 ('Sebastian Lim', 'sebastian47', 'sebastian47@outlook.com', 'pass123', 'staff'),
 ('Ella Reyes', 'ella48', 'ella48@my.cspc.edu.ph', 'pass123', 'staff'),
 ('Matthew Diaz', 'matthew49', 'matthew49@gmail.com', 'pass123', 'staff'),
-('Scarlett Santos', 'scarlett50', 'scarlett50@outlook.com', 'pass123', 'staff');
+('Scarlett Santos', 'scarlett50', 'scarlett50@outlook.com', 'pass123', 'staff'),
+('Administrator', 'admin', 'admin@gmail.com', 'admin123', 'admin');
 
 -- -----------------------------------------------
 -- Data: events (50 records)
