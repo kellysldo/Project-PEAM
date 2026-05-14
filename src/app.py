@@ -3,6 +3,7 @@ from database import get_connection
 from werkzeug.security import generate_password_hash
 from flask_bcrypt import Bcrypt
 import os
+import re
 print("CURRENT DIR:", os.getcwd())
 
 app = Flask(__name__)
@@ -17,7 +18,15 @@ app.secret_key = "your_secret_key"
 @app.route('/users')
 def users():
 
+    if session.get('role') != 'admin':
+        flash("Access denied!")
+        return redirect('/')
+
     search = request.args.get('search', '')
+# @app.route('/users')
+# def users():
+
+#     search = request.args.get('search', '')
 
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
@@ -26,9 +35,10 @@ def users():
         cursor.execute("""
             SELECT * FROM users
             WHERE full_name LIKE %s
+               OR username LIKE %s
                OR email LIKE %s
                OR role LIKE %s
-        """, (f"%{search}%", f"%{search}%", f"%{search}%"))
+        """, (f"%{search}%", f"%{search}%", f"%{search}%", f"%{search}%"))
     else:
         cursor.execute("SELECT * FROM users")
 
@@ -45,6 +55,10 @@ def users():
 @app.route('/users/add', methods=['GET', 'POST'])
 def add_user():
 
+    if session.get('role') != 'admin':
+        flash("Access denied!")
+        return redirect('/')
+
     if request.method == 'POST':
 
         full_name = request.form['full_name']
@@ -59,9 +73,9 @@ def add_user():
 
         try:
             cursor.execute("""
-                INSERT INTO users (full_name, email, password, role)
-                VALUES (%s, %s, %s, %s)
-            """, (full_name, email, password, role))
+                INSERT INTO users (full_name, username, email, password, role)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (full_name, username, email, password, role))
 
             conn.commit()
 
@@ -81,6 +95,10 @@ def add_user():
 # =========================
 @app.route('/users/edit/<int:id>', methods=['GET', 'POST'])
 def edit_user(id):
+
+    if session.get('role') != 'admin':
+        flash("Access denied!")
+        return redirect('/')
 
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
@@ -131,6 +149,10 @@ def edit_user(id):
 # =========================
 @app.route('/users/delete/<int:id>')
 def delete_user(id):
+
+    if session.get('role') != 'admin':
+        flash("Access denied!")
+        return redirect('/')
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -220,7 +242,7 @@ def add_event():
         """
 
         values = (
-            1,
+            session['user_id'],
             event_name,
             event_date,
             location,
@@ -282,9 +304,12 @@ def edit_event(id):
 
         return redirect('/events')
 
-    query = "SELECT * FROM events WHERE event_id = %s"
+    query = """
+    SELECT * FROM events
+    WHERE user_id = %s
+    """
 
-    cursor.execute(query, (id,))
+    cursor.execute(query, (session['user_id'],))
 
     event = cursor.fetchone()
 
@@ -319,9 +344,6 @@ def delete_event(id):
 
 # ==================================================================================================
 
-# =========================
-# VIEW ATTENDEES
-# =========================
 # =========================
 # VIEW ATTENDEES + SEARCH
 # =========================
@@ -486,9 +508,6 @@ def delete_attendee(id):
 # ==================================================================================================
 
 # =========================
-# VIEW REGISTRATIONS
-# =========================
-# =========================
 # VIEW REGISTRATIONS + SEARCH
 # =========================
 @app.route('/registrations')
@@ -619,33 +638,93 @@ def delete_registration(id):
 # =========================
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+
     if request.method == 'POST':
+
         full_name = request.form['full_name']
-        email = request.form.get('email') or None
-
-        if not email:
-            flash("Email is required")
-            return redirect('/users/add')
-
+        email = request.form['email']
         username = request.form['username']
         password = request.form['password']
 
+        # USERNAME LENGTH VALIDATION
+        if len(username) > 20:
+            flash("Username must not exceed 20 characters!")
+            return redirect('/register')
+
+        # PASSWORD LENGTH VALIDATION
+        if len(password) > 20:
+            flash("Password must not exceed 16 characters!")
+            return redirect('/register')
+
+        # EMAIL VALIDATION
+        email_pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+
+        if not re.match(email_pattern, email):
+            flash("Invalid email format!")
+            return redirect('/register')
+
+        # HASH PASSWORD
         hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
 
         conn = get_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
 
-        cursor.execute("""
-            INSERT INTO users (full_name, username, password)
-            VALUES (%s, %s, %s)
-        """, (full_name, username, hashed_password))
+        try:
 
-        conn.commit()
-        cursor.close()
-        conn.close()
+            # CHECK IF USERNAME ALREADY EXISTS
+            cursor.execute(
+                "SELECT * FROM users WHERE username = %s",
+                (username,)
+            )
 
-        flash("Registration successful!")
-        return redirect('/login')
+            existing_user = cursor.fetchone()
+
+            if existing_user:
+                flash("Username already exists!")
+                return redirect('/register')
+
+            # CHECK IF EMAIL ALREADY EXISTS
+            cursor.execute(
+                "SELECT * FROM users WHERE email = %s",
+                (email,)
+            )
+
+            existing_email = cursor.fetchone()
+
+            if existing_email:
+                flash("Email already exists!")
+                return redirect('/register')
+
+            # INSERT NEW USER
+            cursor.execute("""
+                INSERT INTO users (
+                    full_name,
+                    email,
+                    username,
+                    password
+                )
+                VALUES (%s, %s, %s, %s)
+            """, (
+                full_name,
+                email,
+                username,
+                hashed_password
+            ))
+
+            conn.commit()
+
+            flash("Registration successful!")
+            return redirect('/login')
+
+        except Exception as e:
+
+            conn.rollback()
+            return f"Error: {e}"
+
+        finally:
+
+            cursor.close()
+            conn.close()
 
     return render_template('login/register.html')
 
@@ -686,7 +765,7 @@ def login():
 
             flash("Login successful!")
 
-            return redirect('/index.html')
+            return redirect('/')
 
         else:
             flash("Invalid username or password")
