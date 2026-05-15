@@ -23,7 +23,7 @@ The system covers the following:
 - Registration and management of attendees
 - Recording and updating of attendance status per event (`registered`, `present`, `absent`)
 - Basic reporting of attendance statistics on the dashboard
-- Role-based access control distinguishing `admin` and `staff` users
+- Role-based access control distinguishing `admin` and `user` users
 
 The system does **not** cover:
 - Email or SMS notifications to attendees
@@ -45,7 +45,7 @@ To develop a functional web-based Events Attendance Management System using Pyth
 - Implement full CRUD operations for all entities
 - Establish a normalized relational database with at least 3 related tables
 - Provide a user-friendly interface built with Bootstrap 5 for ease of navigation
-- Implement role-based user authentication (`admin` and `staff`) to control access
+- Implement role-based user authentication (`admin` and `user`) to control access
 - Enable search functionality for attendees, events, and registrations
 - Handle duplicate registration attempts gracefully with user-facing error messages
 
@@ -54,18 +54,18 @@ To develop a functional web-based Events Attendance Management System using Pyth
 ## c. Business Rules
 
 ### Detailed Business Logic
-- Only registered users (admins or staff) can log into the system and manage data
+- Only registered users (admins or users) can log into the system and manage data
 - Passwords are stored securely using bcrypt hashing
 - An organizer can create, edit, and delete events
 - Each event must have a unique name, a valid date, and a location
 - Attendees are registered globally and can be linked to multiple events via registrations
 - Each attendee can only be registered once per event (enforced by a `UNIQUE KEY` on `event_id + attendee_id`); attempting a duplicate registration shows a friendly error message instead of crashing
 - Attendance status can be set to `registered`, `present`, or `absent`
-- Only `admin`-role users can access the Users management page; `staff` users are redirected with an "Access denied" message
+- Only `admin`-role users can access the Users management page; `user` users are redirected with an "Access denied" message
 
 ### Role Permissions
 
-| Feature                        | Admin | Staff |
+| Feature                        | Admin | User |
 |-------------------------------|:-----:|:-----:|
 | View Dashboard                | ✅    | ✅    |
 | Manage Events (CRUD)          | ✅    | ✅    |
@@ -306,7 +306,7 @@ python app.py
 |----------|----------|-------|-------------------------------------|
 | admin    | admin123 | admin | Full access including user management |
 
-> Staff accounts can be created by an admin through the Users page after logging in.
+> User accounts can be created by an admin through the Users page after logging in.
 
 ### Stopping the Application
 - Press `Ctrl + C` in Terminal to stop the Flask server
@@ -328,4 +328,4 @@ python app.py
 - Attempting to register the same attendee to the same event twice will show a friendly error message — *"This attendee is already registered for that event."* — and keep the form open instead of crashing.
 - The `/edit_registration/<id>` route fetches both the attendees and events lists to populate the dropdowns correctly.
 - Passwords are hashed using `flask-bcrypt`. Do not manually insert plain-text passwords into the `users` table.
-- Staff users who attempt to access admin-only pages (`/users`, `/users/add`, etc.) are automatically redirected with an "Access denied" flash message.
+- User accounts who attempt to access admin-only pages (`/users`, `/users/add`, etc.) are automatically redirected with an "Access denied" flash message.
