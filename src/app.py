@@ -573,52 +573,46 @@ def add_registration():
         event_id = request.form['event_id']
         attendance_status = request.form['attendance_status']
 
-        query = """
-        INSERT INTO registrations (
-            attendee_id,
-            event_id,
-            attendance_status,
-            registration_date
-        )
-        VALUES (%s, %s, %s, NOW())
-        """
-
-        values = (
-            attendee_id,
-            event_id,
-            attendance_status
-        )
-
         try:
-            cursor.execute(query, values)
+            # CHECK IF ALREADY REGISTERED
+            cursor.execute("""
+                SELECT 1 FROM registrations
+                WHERE attendee_id = %s AND event_id = %s
+            """, (attendee_id, event_id))
+
+            exists = cursor.fetchone()
+
+            if exists:
+                flash("This attendee is already registered for that event.")
+                return redirect('/add_registration')
+
+            # INSERT REGISTRATION
+            cursor.execute("""
+                INSERT INTO registrations (
+                    attendee_id,
+                    event_id,
+                    attendance_status,
+                    registration_date
+                )
+                VALUES (%s, %s, %s, NOW())
+            """, (attendee_id, event_id, attendance_status))
+
             conn.commit()
-            cursor.close()
-            conn.close()
+
             flash("Registration saved successfully!")
             return redirect('/registrations')
 
         except Exception as e:
             conn.rollback()
-            error_msg = str(e)
-            if "Duplicate entry" in error_msg and "unique_registration" in error_msg:
-                flash("This attendee is already registered for that event.")
-            else:
-                flash(f"An error occurred: {error_msg}")
+            flash(f"An error occurred: {str(e)}")
 
         finally:
-            try:
-                cursor.close()
-            except Exception:
-                pass
-            try:
-                conn.close()
-            except Exception:
-                pass
+            cursor.close()
+            conn.close()
 
-        # Re-open connection to repopulate dropdowns after error
-        conn = get_connection()
-        cursor = conn.cursor(dictionary=True)
-
+    # =========================
+    # LOAD DROPDOWN DATA
+    # =========================
     cursor.execute("SELECT * FROM attendees")
     attendees = cursor.fetchall()
 
@@ -633,7 +627,6 @@ def add_registration():
         attendees=attendees,
         events=events
     )
-
 
 # =========================
 # EDIT REGISTRATION
