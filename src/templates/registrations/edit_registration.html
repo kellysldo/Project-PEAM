@@ -72,28 +72,28 @@
             <select name="attendance_status"
                     class="form-control">
 
-                <option value="Present"
-                    {% if registration.attendance_status == 'Present' %}
+                <option value="registered"
+                    {% if registration.attendance_status == 'registered' %}
+                        selected
+                    {% endif %}
+                >
+                    Registered
+                </option>
+
+                <option value="present"
+                    {% if registration.attendance_status == 'present' %}
                         selected
                     {% endif %}
                 >
                     Present
                 </option>
 
-                <option value="Absent"
-                    {% if registration.attendance_status == 'Absent' %}
+                <option value="absent"
+                    {% if registration.attendance_status == 'absent' %}
                         selected
                     {% endif %}
                 >
                     Absent
-                </option>
-
-                <option value="Late"
-                    {% if registration.attendance_status == 'Late' %}
-                        selected
-                    {% endif %}
-                >
-                    Late
                 </option>
 
             </select>

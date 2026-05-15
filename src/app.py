@@ -589,11 +589,35 @@ def add_registration():
             attendance_status
         )
 
-        cursor.execute(query, values)
+        try:
+            cursor.execute(query, values)
+            conn.commit()
+            cursor.close()
+            conn.close()
+            flash("Registration saved successfully!")
+            return redirect('/registrations')
 
-        conn.commit()
+        except Exception as e:
+            conn.rollback()
+            error_msg = str(e)
+            if "Duplicate entry" in error_msg and "unique_registration" in error_msg:
+                flash("This attendee is already registered for that event.")
+            else:
+                flash(f"An error occurred: {error_msg}")
 
-        return redirect('/registrations')
+        finally:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+        # Re-open connection to repopulate dropdowns after error
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
 
     cursor.execute("SELECT * FROM attendees")
     attendees = cursor.fetchall()
@@ -606,6 +630,69 @@ def add_registration():
 
     return render_template(
         'registrations/add_registration.html',
+        attendees=attendees,
+        events=events
+    )
+
+
+# =========================
+# EDIT REGISTRATION
+# =========================
+@app.route('/edit_registration/<int:id>', methods=['GET', 'POST'])
+def edit_registration(id):
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    if request.method == 'POST':
+
+        attendee_id = request.form['attendee_id']
+        event_id = request.form['event_id']
+        attendance_status = request.form['attendance_status']
+
+        query = """
+        UPDATE registrations
+        SET
+            attendee_id=%s,
+            event_id=%s,
+            attendance_status=%s
+        WHERE registration_id=%s
+        """
+
+        values = (
+            attendee_id,
+            event_id,
+            attendance_status,
+            id
+        )
+
+        try:
+            cursor.execute(query, values)
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            return f"Error: {e}"
+        finally:
+            cursor.close()
+            conn.close()
+
+        return redirect('/registrations')
+
+    cursor.execute("SELECT * FROM registrations WHERE registration_id = %s", (id,))
+    registration = cursor.fetchone()
+
+    cursor.execute("SELECT * FROM attendees")
+    attendees = cursor.fetchall()
+
+    cursor.execute("SELECT * FROM events")
+    events = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return render_template(
+        'registrations/edit_registration.html',
+        registration=registration,
         attendees=attendees,
         events=events
     )

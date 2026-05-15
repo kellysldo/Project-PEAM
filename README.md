@@ -21,9 +21,10 @@ The system aims to solve the following problems:
 The system covers the following:
 - Creation, editing, and deletion of events by authorized users
 - Registration and management of attendees
-- Recording and updating of attendance status per event
+- Recording and updating of attendance status per event (`registered`, `present`, `absent`)
 - QR code generation for each registered attendee per event
-- Basic reporting of attendance statistics
+- Basic reporting of attendance statistics on the dashboard
+- Role-based access control distinguishing `admin` and `staff` users
 
 The system does **not** cover:
 - Real-time QR code scanning via camera
@@ -31,8 +32,9 @@ The system does **not** cover:
 - Payment or ticketing functionality
 
 ### Target Users
-- **Organizers/Admins** — Users who log in to the system to create and manage events and monitor attendance
-- **Attendees** — Individuals who are registered into the system by organizers and whose attendance is tracked
+- **Admins** — Have full access to the system including user management; can create and manage events, attendees, and registrations
+- **Staff** — Can manage events, attendees, and registrations but cannot access the Users management page
+- **Attendees** — Individuals registered into the system by organizers; their attendance is tracked but they do not log in
 
 ---
 
@@ -42,27 +44,39 @@ The system does **not** cover:
 To develop a functional web-based Events Attendance Management System using Python (Flask) and MySQL that enables organizers to efficiently manage events, register attendees, and track attendance.
 
 ### Secondary Objectives
-- Implement full CRUD (Create, Read, Update, Delete) operations for all entities
+- Implement full CRUD operations for all entities
 - Establish a normalized relational database with at least 3 related tables
-- Provide a user-friendly interface built with Bootstrap for ease of navigation
-- Implement user authentication to restrict access to authorized organizers only
+- Provide a user-friendly interface built with Bootstrap 5 for ease of navigation
+- Implement role-based user authentication (`admin` and `staff`) to control access
 - Generate QR codes for attendee registrations to support faster check-in processes
-- Enable search functionality for attendees and events
+- Enable search functionality for attendees, events, and registrations
+- Handle duplicate registration attempts gracefully with user-facing error messages
 
 ---
 
 ## c. Business Rules
 
 ### Detailed Business Logic
-- Only registered users (organizers) can log into the system and manage data
-- Passwords are stored securely using hashing
-- An organizer can create, edit, and delete events they manage
+- Only registered users (admins or staff) can log into the system and manage data
+- Passwords are stored securely using bcrypt hashing
+- An organizer can create, edit, and delete events
 - Each event must have a unique name, a valid date, and a location
 - Attendees are registered globally and can be linked to multiple events via registrations
-- Each attendee can only be registered once per event (no duplicate registrations)
+- Each attendee can only be registered once per event (enforced by a `UNIQUE KEY` on `event_id + attendee_id`); attempting a duplicate registration shows a friendly error message instead of crashing
 - Attendance status can be set to `registered`, `present`, or `absent`
 - A unique QR code is generated for each registration record
-- Check-in time is recorded when an attendee's status is updated to `present`
+- Only `admin`-role users can access the Users management page; `staff` users are redirected with an "Access denied" message
+
+### Role Permissions
+
+| Feature                        | Admin | Staff |
+|-------------------------------|:-----:|:-----:|
+| View Dashboard                | ✅    | ✅    |
+| Manage Events (CRUD)          | ✅    | ✅    |
+| Manage Attendees (CRUD)       | ✅    | ✅    |
+| Manage Registrations (CRUD)   | ✅    | ✅    |
+| View Users list               | ✅    | ❌    |
+| Add / Edit / Delete Users     | ✅    | ❌    |
 
 ### Constraints
 - `email` in the `attendees` table must be unique
@@ -82,23 +96,23 @@ To develop a functional web-based Events Attendance Management System using Pyth
 ## d. Database Models
 
 ### Entity Relationship Diagram (ERD)
-![ERD](docs/diagrams/erd.png)
+![ERD](docs/diagram/erd.png)
 
 The ERD illustrates the following entities and relationships:
-- **users** — stores organizer accounts
-- **events** — stores event details; linked to users (one user manages many events)
-- **attendees** — stores participant information
-- **registrations** — bridge table linking attendees to events; tracks attendance status and QR code
+- **users** — stores organizer accounts; one user manages many events (1:N)
+- **events** — stores event details; linked to users via `user_id` (FK)
+- **attendees** — stores participant information; one attendee can have many registrations (1:N)
+- **registrations** — bridge/junction table linking attendees to events; tracks attendance status and QR code
 
 ### Relational Model
-![Relational Model](docs/diagrams/rm.png)
+![Relational Model](docs/diagram/rm.png)
 
-| Table         | Attributes                                                                 |
-|---------------|----------------------------------------------------------------------------|
-| users         | user_id (PK), username, password                                           |
-| events        | event_id (PK), user_id (FK), event_name, event_date, location, description |
-| attendees     | attendee_id (PK), fullname, email, contact_no, address                     |
-| registrations | registration_id (PK), attendee_id (FK), event_id (FK), attendance_status, registration_date, qr_code |
+| Table         | Attributes                                                                                                       |
+|---------------|------------------------------------------------------------------------------------------------------------------|
+| users         | **user_id** (PK), full_name, username, email, password, role, created_at                                        |
+| events        | **event_id** (PK), *user_id* (FK → users), event_name, event_date, location, description                        |
+| attendees     | **attendee_id** (PK), fullname, email, contact_no, address                                                      |
+| registrations | **registration_id** (PK), *attendee_id* (FK), *event_id* (FK), attendance_status, registration_date, qr_code    |
 
 ---
 
@@ -106,24 +120,81 @@ The ERD illustrates the following entities and relationships:
 
 ### Architecture
 The application follows the **MVC (Model-View-Controller)** design pattern:
-- **Model** — `database.py` handles all database connections and SQL queries
-- **View** — HTML templates (Jinja2 + Bootstrap) handle the user interface
-- **Controller** — `app.py` contains Flask routes that process requests and return responses
+- **Model** — `database.py` handles the MySQL connection
+- **View** — HTML templates (Jinja2 + Bootstrap 5) handle the user interface
+- **Controller** — `app.py` contains all Flask routes that process requests and return responses
 
 ### Key Components
-- `app.py` — Main Flask application; defines all routes and session handling
-- `database.py` — Database helper functions for executing queries
-- `templates/` — Jinja2 HTML templates organized by feature (events, attendees, registrations)
-- `database/schema.sql` — SQL script to create all tables
-- `database/initial_data.sql` — SQL script to populate tables with sample data
-- `docs/diagrams/` — ERD and Relational Model diagrams
+
+```
+Project-PEAMS/
+├── src/
+│   ├── app.py                          # Flask routes and application logic
+│   ├── database.py                     # MySQL connection helper
+│   └── templates/
+│       ├── login/
+│       │   ├── index.html              # Dashboard
+│       │   ├── login.html
+│       │   └── register.html
+│       ├── partials/
+│       │   └── navbar.html
+│       ├── users/
+│       │   ├── users.html
+│       │   ├── add_user.html
+│       │   └── edit_user.html
+│       ├── events/
+│       │   ├── events.html
+│       │   ├── add_event.html
+│       │   └── edit_event.html
+│       ├── attendees/
+│       │   ├── attendees.html
+│       │   ├── add_attendee.html
+│       │   └── edit_attendee.html
+│       └── registrations/
+│           ├── registrations.html
+│           ├── add_registration.html
+│           └── edit_registration.html
+├── database/
+│   ├── schema.sql
+│   └── initial_data.sql
+├── docs/
+│   └── diagram/
+│       ├── erd.png
+│       └── rm.png
+└── README.md
+```
+
+### Routes Summary
+
+| Method   | Route                       | Description                          | Auth          |
+|----------|-----------------------------|--------------------------------------|---------------|
+| GET      | `/`                         | Dashboard with summary counts        | ✅ Any user   |
+| GET/POST | `/login`                    | Login page / authenticate            | ❌            |
+| GET/POST | `/register`                 | Self-registration                    | ❌            |
+| GET      | `/logout`                   | Clear session                        | ✅            |
+| GET      | `/users`                    | List all users                       | ✅ Admin only |
+| GET/POST | `/users/add`                | Add new user                         | ✅ Admin only |
+| GET/POST | `/users/edit/<id>`          | Edit existing user                   | ✅ Admin only |
+| GET      | `/users/delete/<id>`        | Delete user                          | ✅ Admin only |
+| GET      | `/events`                   | List / search events                 | ✅ Any user   |
+| GET/POST | `/add_event`                | Add new event                        | ✅ Any user   |
+| GET/POST | `/edit_event/<id>`          | Edit event                           | ✅ Any user   |
+| GET      | `/delete_event/<id>`        | Delete event                         | ✅ Any user   |
+| GET      | `/attendees`                | List / search attendees              | ✅ Any user   |
+| GET/POST | `/add_attendee`             | Add new attendee                     | ✅ Any user   |
+| GET/POST | `/edit_attendee/<id>`       | Edit attendee                        | ✅ Any user   |
+| GET      | `/delete_attendee/<id>`     | Delete attendee                      | ✅ Any user   |
+| GET      | `/registrations`            | List / search registrations          | ✅ Any user   |
+| GET/POST | `/add_registration`         | Register attendee to an event        | ✅ Any user   |
+| GET/POST | `/edit_registration/<id>`   | Edit registration / update status    | ✅ Any user   |
+| GET      | `/delete_registration/<id>` | Delete registration                  | ✅ Any user   |
 
 ---
 
 ## f. Setup Instructions
 
 ### Prerequisites
-- Python 3.x
+- Python 3.8 or higher
 - XAMPP (includes MySQL and phpMyAdmin)
 - Git
 - Web browser (Chrome or Firefox recommended)
@@ -158,19 +229,19 @@ pip install -r requirements.txt
 - Click **Import** → select `database/schema.sql` → click **Go**
 - Click **Import** again → select `database/initial_data.sql` → click **Go**
 
-**6. Set environment variables**
+**6. Configure the database connection**
 
-Create a `.env` file in the root directory:
-```
-SECRET_KEY=your_secret_key_here
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=
-DB_NAME=CCCS105
+Open `src/database.py` and confirm the connection settings match your XAMPP setup:
+```python
+host     = "localhost"
+user     = "root"
+password = ""          # default XAMPP has no password
+database = "CCCS105"
 ```
 
 **7. Run the application**
 ```bash
+cd src
 python app.py
 ```
 
@@ -185,24 +256,26 @@ http://localhost:5000
 
 ## g. Team Members & Roles
 
-| Name                    | Role                        | Responsibilities                                              |
-|-------------------------|-----------------------------|---------------------------------------------------------------|
-| Kelly Saldo             | Fullstack Developer         | Flask routes, database connection, CRUD logic, authentication, HTML templates,  Bootstrap layout |
-| Micabelle Allison Nomo  | Frontend Developer          | HTML templates, CSS styling, Bootstrap layout, UI design, testing      |
-| Rizelyn Joy Borbe       | Backend Developer, Database & Documentation    | ERD, relational model, SQL schema, initial data, README, testing, Flask routes, database connection |
+| Name                    | Role                                        | Responsibilities                                                                               |
+|-------------------------|---------------------------------------------|-----------------------------------------------------------------------------------------------|
+| Kelly Saldo             | Fullstack Developer                         | Flask routes, database connection, CRUD logic, authentication, HTML templates, Bootstrap layout |
+| Micabelle Allison Nomo  | Frontend Developer                          | HTML templates, CSS styling, Bootstrap layout, UI design, testing                              |
+| Rizelyn Joy Borbe       | Backend Developer, Database & Documentation | ERD, relational model, SQL schema, initial data, README, testing, Flask routes, database connection |
 
 ---
 
 ## h. Dependencies
 
 ### Python Packages
-| Package              | Version  | Purpose                          |
-|----------------------|----------|----------------------------------|
-| Flask                | 3.0.x    | Web framework                    |
-| mysql-connector-python | 8.x.x  | MySQL database connectivity      |
-| qrcode               | 7.x.x    | QR code generation               |
-| Pillow               | 10.x.x   | Image processing for QR codes    |
-| python-dotenv        | 1.x.x    | Environment variable management  |
+
+| Package                | Version | Purpose                         |
+|------------------------|---------|---------------------------------|
+| Flask                  | 3.0.x   | Web framework                   |
+| flask-bcrypt           | 1.x.x   | Password hashing                |
+| mysql-connector-python | 8.x.x   | MySQL database connectivity     |
+| qrcode                 | 7.x.x   | QR code generation              |
+| Pillow                 | 10.x.x  | Image processing for QR codes   |
+| python-dotenv          | 1.x.x   | Environment variable management |
 
 ### System Requirements
 - OS: Windows 10/11, macOS 12+, or Ubuntu 20.04+
@@ -221,24 +294,38 @@ http://localhost:5000
 source venv/bin/activate    # macOS/Linux
 venv\Scripts\activate       # Windows
 ```
-3. Run the app:
+3. Navigate to `src/` and run:
 ```bash
 python app.py
 ```
-4. Open browser → go to `http://localhost:5000`
+4. Open browser → `http://localhost:5000`
 
 ### Default Login Credentials
-| Username | Password  |
-|----------|-----------|
-| admin    | admin123  |
+
+| Username | Password | Role  | Access Level                        |
+|----------|----------|-------|-------------------------------------|
+| admin    | admin123 | admin | Full access including user management |
+
+> Staff accounts can be created by an admin through the Users page after logging in.
 
 ### Stopping the Application
-- Press `Ctrl + C` in the Terminal to stop the Flask server
+- Press `Ctrl + C` in Terminal to stop the Flask server
 - Stop Apache and MySQL in XAMPP Control Panel
 
 ### Navigating the Application
-- **Dashboard** — Overview of events and recent registrations
+- **Dashboard** — Overview of total events, attendees, and registrations
 - **Events** — View, add, edit, and delete events
 - **Attendees** — View, add, edit, and delete attendees
-- **Registrations** — Register attendees to events, update attendance status, view QR codes
+- **Registrations** — Register attendees to events, update attendance status
+- **Users** *(admin only)* — View, add, edit, and delete system user accounts
 - **Logout** — End the current session
+
+---
+
+## j. Known Issues & Notes
+
+- `attendance_status` values are stored in lowercase (`registered`, `present`, `absent`) matching the database ENUM definition. All UI dropdowns use these exact values.
+- Attempting to register the same attendee to the same event twice will show a friendly error message — *"This attendee is already registered for that event."* — and keep the form open instead of crashing.
+- The `/edit_registration/<id>` route fetches both the attendees and events lists to populate the dropdowns correctly.
+- Passwords are hashed using `flask-bcrypt`. Do not manually insert plain-text passwords into the `users` table.
+- Staff users who attempt to access admin-only pages (`/users`, `/users/add`, etc.) are automatically redirected with an "Access denied" flash message.
